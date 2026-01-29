@@ -1304,61 +1304,180 @@ Email (ai@yourdomain.com)          ← Foundation (required first)
 | Sign up for any service | Email address |
 | Act independently | Distinct identity |
 
-### Step 3.1: Set Up AWS WorkMail (Recommended)
+### Step 3.1: Set Up AWS WorkMail (CloudShell Commands)
 
-**Why WorkMail over SES?**
-- SES = API only, no inbox, dumps emails to S3
-- WorkMail = Full mailbox with IMAP, like Google Workspace
-
-**WorkMail gives you:**
-- ✅ Real inbox (IMAP access for Clawdbot via CLI)
+**Why WorkMail?**
+- ✅ Full mailbox with IMAP (Clawdbot reads inbox via CLI)
+- ✅ Built-in SMTP (Clawdbot sends emails)
 - ✅ Web UI (you can log in and review anytime)
-- ✅ Folders, sent mail, search
 - ✅ Uses your AWS credits
 - ✅ Calendar & contacts included
+- ✅ No SES needed — WorkMail handles both sending AND receiving
 
 **Cost:** $4/user/month (~$48/year)
 
-**Setup Steps:**
+---
 
-1. **Go to AWS WorkMail Console**: [console.aws.amazon.com/workmail](https://console.aws.amazon.com/workmail/)
+#### Step 3.1.1: Create WorkMail Organization (CloudShell)
 
-2. **Create an organization:**
-   ```
-   WorkMail Console → Create organization → Quick setup
-   Name: yourdomain-mail (or similar)
-   ```
+```bash
+# Replace with your preferred alias (e.g., yourdomain-mail)
+ORG_ALIAS="yourdomain-mail"
 
-3. **Add your domain:**
-   ```
-   Organization → Domains → Add domain → yourdomain.com
-   ```
+# Create WorkMail organization
+aws workmail create-organization \
+    --alias $ORG_ALIAS \
+    --region us-east-1
 
-4. **Add DNS records** (WorkMail will provide these):
-   - MX record (for receiving mail)
-   - SPF record (TXT)
-   - DKIM records (CNAME)
-   - Autodiscover (CNAME) - optional
+# Wait ~30 seconds for provisioning, then get Organization ID
+ORG_ID=$(aws workmail list-organizations --region us-east-1 \
+    --query "OrganizationSummaries[?Alias==\`$ORG_ALIAS\`].OrganizationId" \
+    --output text)
+echo "Organization ID: $ORG_ID"
 
-5. **Create the AI mailbox:**
-   ```
-   Organization → Users → Create user
-   Username: ai
-   Display name: Your AI Assistant
-   Email: ai@yourdomain.com
-   ```
-
-6. **Note the IMAP/SMTP servers:**
-   ```
-   IMAP: imap.mail.us-east-1.awsapps.com (port 993, SSL)
-   SMTP: smtp.mail.us-east-1.awsapps.com (port 465, SSL)
-   ```
-
-**Web UI access:** `https://mail.us-east-1.awsapps.com/mail`
+# Save for later steps
+echo "ORG_ID=$ORG_ID" >> clawdbot-instance.env
+echo "ORG_ALIAS=$ORG_ALIAS" >> clawdbot-instance.env
+```
 
 - [ ] **CHECKPOINT:** WorkMail organization created
-- [ ] **CHECKPOINT:** Domain verified
-- [ ] **CHECKPOINT:** ai@yourdomain.com mailbox created
+
+#### Step 3.1.2: Register Your Domain (CloudShell)
+
+> 📚 **AWS CLI Reference:** [aws workmail commands](https://docs.aws.amazon.com/cli/latest/reference/workmail/)
+
+```bash
+# Load saved ORG_ID
+source clawdbot-instance.env
+
+# Replace with YOUR domain
+DOMAIN="yourdomain.com"
+
+# Register domain with WorkMail
+aws workmail register-mail-domain \
+    --organization-id $ORG_ID \
+    --domain-name $DOMAIN \
+    --region us-east-1
+
+# Get domain details (DNS records, verification status)
+aws workmail get-mail-domain \
+    --organization-id $ORG_ID \
+    --domain-name $DOMAIN \
+    --region us-east-1
+
+# List all domains to see status
+aws workmail list-mail-domains \
+    --organization-id $ORG_ID \
+    --region us-east-1
+
+# Save domain for later
+echo "DOMAIN=$DOMAIN" >> clawdbot-instance.env
+```
+
+**⚠️ PAUSE HERE** - Add DNS records to your domain before proceeding.
+
+The `get-mail-domain` output will show the exact records needed. Typically:
+
+| Type | Name | Value |
+|------|------|-------|
+| MX | @ | 10 inbound-smtp.us-east-1.amazonaws.com |
+| TXT | @ | "v=spf1 include:amazonses.com ~all" |
+| TXT | _amazonses.yourdomain.com | (verification token from output) |
+| CNAME | (selector)._domainkey | (DKIM value from output) |
+
+**Alternative: Get DNS records via AWS Console:**
+1. Go to [WorkMail Console](https://console.aws.amazon.com/workmail/)
+2. Select your organization → **Domains**
+3. Click on your domain to see required DNS records
+
+**Verify domain status:**
+```bash
+# Check domain details including verification status
+aws workmail get-mail-domain \
+    --organization-id $ORG_ID \
+    --domain-name $DOMAIN \
+    --region us-east-1
+
+# Or list all domains with their status
+aws workmail list-mail-domains \
+    --organization-id $ORG_ID \
+    --region us-east-1
+```
+
+- [ ] **CHECKPOINT:** DNS records added to your domain
+- [ ] **CHECKPOINT:** Domain verified in WorkMail
+
+#### Step 3.1.3: Create Clawdbot Mailbox (CloudShell)
+
+```bash
+# Load saved variables
+source clawdbot-instance.env
+
+# Set your desired username and display name
+EMAIL_USER="ai"                        # Creates ai@yourdomain.com
+DISPLAY_NAME="Your AI Assistant"       # Shown in email headers
+EMAIL_PASSWORD="CHANGE_THIS_SecureP@ss123!"  # ⚠️ USE A STRONG PASSWORD!
+
+# Create user
+aws workmail create-user \
+    --organization-id $ORG_ID \
+    --name "$EMAIL_USER" \
+    --display-name "$DISPLAY_NAME" \
+    --password "$EMAIL_PASSWORD" \
+    --region us-east-1
+
+# Get User ID
+USER_ID=$(aws workmail list-users --organization-id $ORG_ID --region us-east-1 \
+    --query "Users[?Name==\`$EMAIL_USER\`].UserId" \
+    --output text)
+echo "User ID: $USER_ID"
+
+# Register the email address
+EMAIL_ADDRESS="${EMAIL_USER}@${DOMAIN}"
+aws workmail register-to-work-mail \
+    --organization-id $ORG_ID \
+    --entity-id $USER_ID \
+    --email "$EMAIL_ADDRESS" \
+    --region us-east-1
+
+echo "✅ Mailbox created: $EMAIL_ADDRESS"
+
+# Save for reference
+echo "EMAIL_ADDRESS=$EMAIL_ADDRESS" >> clawdbot-instance.env
+```
+
+- [ ] **CHECKPOINT:** Clawdbot mailbox created
+
+#### Step 3.1.4: Connection Details
+
+After completing the steps above, your connection details are:
+
+```
+=== Clawdbot Email Credentials ===
+Email: ai@yourdomain.com (or whatever you configured)
+Password: (what you set in Step 3.1.3)
+
+=== IMAP (for reading inbox) ===
+Server: imap.mail.us-east-1.awsapps.com
+Port: 993 (SSL/TLS)
+Username: ai@yourdomain.com
+
+=== SMTP (for sending email) ===
+Server: smtp.mail.us-east-1.awsapps.com
+Port: 465 (SSL/TLS)
+Username: ai@yourdomain.com
+Password: (same as above)
+
+=== Web UI (for human oversight) ===
+URL: https://{ORG_ALIAS}.awsapps.com/mail
+     (e.g., https://yourdomain-mail.awsapps.com/mail)
+Login: ai@yourdomain.com + password
+```
+
+**💡 Tip:** Log into the Web UI to verify everything works before configuring Clawdbot.
+
+- [ ] **CHECKPOINT:** Can log into WorkMail Web UI
+- [ ] **CHECKPOINT:** Connection details saved securely
 
 ### Step 3.2: Install Himalaya CLI (Agent-Native Email)
 
