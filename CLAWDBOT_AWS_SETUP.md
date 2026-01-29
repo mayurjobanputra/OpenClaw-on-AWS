@@ -832,6 +832,88 @@ Then from your **local machine** with the SSH tunnel:
 
 - [ ] **CHECKPOINT:** AWS Bedrock integration working
 
+### Step 1.12: Enable Advanced Memory Features (HIGHLY RECOMMENDED)
+
+By default, ClawdBot's two best memory features are **turned OFF**. Enabling them dramatically improves context retention across sessions and compactions.
+
+#### What These Features Do
+
+| Feature | Setting | Problem It Solves |
+|---------|---------|-------------------|
+| **Memory Flush** | `compaction.memoryFlush.enabled: true` | When context gets too large, ClawdBot "compacts" it (summarizes old messages). Without memory flush, important details get lost. With it enabled, everything important is automatically saved to memory files RIGHT BEFORE compaction. |
+| **Session Memory Search** | `memorySearch.experimental.sessionMemory: true` | Normally ClawdBot can only search your `MEMORY.md` file. With session memory search, it can search through **every conversation** you've ever had, even ones it no longer "remembers." |
+
+#### Why Enable These?
+
+- ✅ **Zero performance cost** - These are just configuration flags
+- ✅ **Prevents data loss** - Memory flush saves context before compaction wipes it
+- ✅ **Better recall** - Session search finds answers from past conversations without you repeating context
+- ✅ **Stable features** - Marked experimental but have been reliable
+
+#### Apply the Configuration
+
+**Option A: Via Gateway API** (if gateway is running with tools):
+
+Ask ClawdBot:
+```
+Enable memory flush before compaction and session memory search in my Clawdbot config.
+Set compaction.memoryFlush.enabled to true and set memorySearch.experimental.sessionMemory
+to true with sources including both memory and sessions. Apply the config changes.
+```
+
+**Option B: Manual Edit** (on EC2):
+
+```bash
+# Edit the config file
+nano ~/.clawdbot/clawdbot.json
+```
+
+Add/update these sections in your `agents.defaults`:
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "memorySearch": {
+        "sources": ["memory", "sessions"],
+        "experimental": {
+          "sessionMemory": true
+        }
+      },
+      "compaction": {
+        "mode": "safeguard",
+        "memoryFlush": {
+          "enabled": true
+        }
+      }
+    }
+  }
+}
+```
+
+**Restart the gateway:**
+```bash
+systemctl --user restart clawdbot-gateway
+```
+
+#### Verify Configuration
+
+```bash
+# Check the config shows the new settings
+cat ~/.clawdbot/clawdbot.json | grep -A5 "memoryFlush"
+cat ~/.clawdbot/clawdbot.json | grep -A5 "memorySearch"
+```
+
+Expected output should show:
+- `"memoryFlush": { "enabled": true }`
+- `"sessionMemory": true`
+- `"sources": ["memory", "sessions"]`
+
+- [ ] **CHECKPOINT:** Memory flush enabled
+- [ ] **CHECKPOINT:** Session memory search enabled
+
+---
+
 #### Alternative: Direct Anthropic API Key
 
 If you prefer to use Anthropic directly (requires separate API key from [console.anthropic.com](https://console.anthropic.com/)):
@@ -1862,7 +1944,8 @@ http://localhost:18789/?token=YOUR_TOKEN
 | 1.8 Install ClawdBot | ✅ Done | 2026-01-27 |
 | 1.9 Run onboarding | ✅ Done | 2026-01-27 |
 | 1.10 Start gateway | ✅ Done | 2026-01-27 |
-| 1.11 Configure AWS Bedrock | ⏭️ **NEXT STEP** | |
+| 1.11 Configure AWS Bedrock | ✅ Done | 2026-01-28 |
+| 1.12 Enable memory features | ✅ Done | 2026-01-28 |
 
 **Notes:**
 - Upgraded to t2.small (2GB RAM) due to OOM errors on t2.micro
