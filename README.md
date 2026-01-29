@@ -82,8 +82,8 @@ Then follow Part 2 to give Clawdbot its own identity.
 
 ```bash
 # 1. Clone this repo
-git clone https://github.com/mayurjobanputra/Moltbot-Clawdbot-on-aws.git
-cd Moltbot-Clawdbot-on-aws
+git clone https://github.com/mayurjobanputra/AWS-Moltbot-Clawdbot.git
+cd AWS-Moltbot-Clawdbot
 
 # 2. Copy credentials template
 cp credentials-template.md credentials.md

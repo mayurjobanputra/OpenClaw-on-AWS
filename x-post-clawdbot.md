@@ -8,7 +8,7 @@ After seeing @0xSammy's report about 923 exposed gateways, I made sure mine is l
 
 Full setup guide open-sourced 👇
 
-🔗 github.com/mayurjobanputra/mayur-dot-ai-clawdbot-on-aws
+🔗 github.com/mayurjobanputra/AWS-Moltbot-Clawdbot
 
 ---
 
@@ -62,7 +62,7 @@ The free tier t2.micro doesn't have enough RAM — learned that the hard way �
 
 Full guide with troubleshooting, security steps, and quick commands:
 
-🔗 github.com/mayurjobanputra/mayur-dot-ai-clawdbot-on-aws
+🔗 github.com/mayurjobanputra/AWS-Moltbot-Clawdbot
 
 Star it if you find it useful! ⭐
 
@@ -77,6 +77,6 @@ Star it if you find it useful! ⭐
 ✅ Token: 48-char random
 ✅ Port 18789: invisible to internet
 
-Full guide (free): github.com/mayurjobanputra/mayur-dot-ai-clawdbot-on-aws
+Full guide (free): github.com/mayurjobanputra/AWS-Moltbot-Clawdbot
 
 cc @DanielMiessler @0xSammy
