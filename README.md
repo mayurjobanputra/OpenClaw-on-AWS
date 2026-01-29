@@ -28,7 +28,47 @@ The guide is written to be both human-readable AND machine-parseable with clear 
 - 🔒 **Secure by default** - Localhost-only binding, SSH tunnel access
 - 💰 **Use your AWS credits** - Works with $1,000 AWS Activate program
 - 🧠 **Any LLM backend** - Claude (Bedrock), Gemini, GPT, Anthropic API, and more
-- 📱 **Multi-channel** - WhatsApp, Discord, Slack, Telegram integration ready
+- 💬 **Built-in web chat** - No external channels required
+- 📱 **Optional channels** - Email, X/Twitter, Telegram (Part 2)
+
+---
+
+## 📖 Guide Structure
+
+The setup guide has **two parts**:
+
+| Part | What You Get | Time |
+|------|--------------|------|
+| **Part 1: Core Setup** | Private Clawdbot server, secure SSH access, web chat | ~30-60 min |
+| **Part 2: Digital Twin** | Email, GitHub, X accounts for autonomous AI | ~2-3 hours |
+
+### Part 1 is all you need to start!
+
+After Part 1, you can chat with Clawdbot via:
+- ✅ SSH tunnel + built-in web chat
+- ✅ CLI (`clawdbot chat` over SSH)
+- ✅ VS Code + Roo Code extension
+- ✅ Tailscale VPN (optional)
+
+### Part 2 adds external communication
+
+If you want Clawdbot to:
+- 📧 Send/receive email
+- 🐙 Push to GitHub repos
+- 🐦 Post to X/Twitter
+- 🌐 Maintain a public website
+
+Then follow Part 2 to give Clawdbot its own identity.
+
+### 🔐 Channel Security
+
+| Channel | Security | Notes |
+|---------|----------|-------|
+| **SSH tunnel + Web chat** | ✅ Excellent | Only you have the PEM key |
+| **Tailscale VPN** | ✅ Excellent | Encrypted mesh network |
+| **X/Twitter DMs** | ✅ Good | Private, controlled account |
+| **Email** | ✅ Good | Private inbox |
+| **WhatsApp** | ⚠️ Risky | AI replies AS YOU — avoid |
 
 ## 🚀 Quick Start
 
@@ -179,11 +219,13 @@ MIT License - Use freely, contribute back!
 This repo was originally created for my personal AI assistant setup at mayur.ai:
 
 **My Project Goals:**
-1. ✅ Phase 1: Run Clawdbot on AWS VPS  
+1. ✅ Phase 1: Run Clawdbot on AWS VPS
 2. ✅ Phase 2: Security lockdown
-3. ⏳ Phase 3: VR avatar website
-4. ⏳ Phase 4: Domain configuration (mayur.ai)
+3. ⏳ Phase 3: Clawdbot identity (SES email + GitHub account)
+4. ⏳ Phase 4: Public website on Vercel (separate from EC2)
 5. ⏳ Phase 5: Crabwalk monitoring
+
+**Architecture Decision:** Keep Clawdbot EC2 completely private. Public website hosted separately on Vercel. Clawdbot updates website via git push.
 
 </details>
 

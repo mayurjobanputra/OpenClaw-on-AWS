@@ -1,55 +1,128 @@
 # ClawdBot AWS VPS Setup Guide
 
-**Author:** AI-assisted setup documentation  
-**Last Updated:** 2026-01-27
-**Status:** Phase 2 - Security Lockdown (In Progress)
+**Author:** AI-assisted setup documentation
+**Last Updated:** 2026-01-28
+**Status:** Phases 1 & 2 Complete
+
+---
+
+## 📖 Document Structure
+
+This guide is divided into **two parts**:
+
+| Part | What You Get | Who Needs It |
+|------|--------------|--------------|
+| **Part 1: Core Setup** (Phases 0-2) | Private Clawdbot server on AWS, secure and working | Everyone |
+| **Part 2: Digital Twin** (Phases 3-5) | Full autonomous AI with email, GitHub, social accounts | Those building a VA/digital twin |
+
+**After completing Part 1**, you have a fully functional Clawdbot accessible via:
+- ✅ SSH tunnel + Gateway web chat (built-in)
+- ✅ Private VPN like Tailscale (optional)
+- ✅ `clawdbot chat` CLI command
+
+**Part 2 is optional** — it adds email, GitHub, X/Twitter accounts so Clawdbot can act autonomously and communicate externally.
 
 ---
 
 ## Table of Contents
+
+### Part 1: Core Clawdbot Setup (Required)
 1. [Overview](#overview)
 2. [Phase 0: AWS Account Setup](#phase-0-aws-account-setup-before-you-begin)
 3. [Phase 1: AWS VPS Setup](#phase-1-aws-vps-setup)
 4. [Phase 2: Security Lockdown](#phase-2-security-lockdown)
-5. [Phase 3: VR Website Setup](#phase-3-vr-website-setup)
-6. [Phase 4: Domain Configuration (mayur.ai)](#phase-4-domain-configuration)
+
+### Part 2: Digital Twin / VA Setup (Optional)
+5. [Phase 3: Clawdbot Identity (Email + GitHub + X)](#phase-3-clawdbot-identity-email--github--x)
+6. [Phase 4: Public Website (Hosted Separately)](#phase-4-public-website-hosted-separately)
 7. [Phase 5: Crabwalk Integration](#phase-5-crabwalk-integration)
+
+### Reference
 8. [Troubleshooting](#troubleshooting)
-9. [Progress Tracking](#progress-tracking)
+9. [Quick Reference Commands](#quick-reference-commands)
+10. [Progress Tracking](#progress-tracking)
+
+---
+
+# PART 1: CORE CLAWDBOT SETUP
+
+> **Goal:** Get Clawdbot running privately on AWS with secure access.
+> **Time:** ~30-60 minutes
+> **Cost:** ~$19/month (or free with AWS Activate credits)
 
 ---
 
 ## Overview
 
-### Goals
-- Run ClawdBot as a personal AI assistant on an AWS VPS
-- Secure the instance so only YOU can access it
-- Serve a public website on ports 80/443 via your domain (mayur.ai)
-- Keep ClawdBot gateway (port 18789) private and locked down
+### What Part 1 Gives You
+- ✅ Clawdbot running 24/7 on your own AWS server
+- ✅ Secure access via SSH tunnel (only you can connect)
+- ✅ Built-in web chat interface
+- ✅ CLI access (`clawdbot chat`)
+- ✅ Your AWS Bedrock credits powering Claude models
 
-### Architecture
+### How You'll Access Clawdbot
+
+After Part 1, you have several access methods:
+
+| Method | Security | Setup |
+|--------|----------|-------|
+| **SSH tunnel + Web chat** | ✅ Excellent | Automatic with `ssh clawdbot` |
+| **CLI** (`ssh clawdbot`, then `clawdbot chat`) | ✅ Excellent | Built-in |
+| **Tailscale VPN** | ✅ Excellent | Optional, ~5 min setup |
+| **VS Code + Roo Code** | ✅ Excellent | Connect via SSH, AI in your editor |
+
+**No public exposure needed for basic use!**
+
+### ⚠️ Important: Keep This Server Private
+
+**Do NOT run a public website on this EC2 instance.** The Clawdbot server should remain completely private for security reasons.
+
+If you want a public website, host it separately (Vercel, Netlify, etc.) — see Part 2.
+
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    AWS EC2 Instance                          │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────────┐    ┌──────────────────────────────────┐│
-│  │   ClawdBot      │    │    Your Website (VR Avatar)     ││
-│  │   Gateway       │    │    Nginx/Node.js                ││
-│  │   Port: 18789   │    │    Ports: 80, 443               ││
-│  │   (LOCALHOST    │    │    (PUBLIC ACCESS)              ││
-│  │    ONLY!)       │    │                                 ││
-│  └─────────────────┘    └──────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────┘
-                    │                     │
-                    │ SSH Tunnel          │ HTTPS
-                    │ (Your PEM key)      │ (Public)
-                    ▼                     ▼
-            ┌───────────────┐     ┌────────────────┐
-            │ YOUR LAPTOP   │     │   THE WORLD    │
-            │ (Private      │     │   (mayur.ai)   │
-            │  Access)      │     │                │
-            └───────────────┘     └────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        DUAL AI ARCHITECTURE                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─────────────────────────────┐     ┌─────────────────────────────────┐    │
+│  │  PRIVATE EC2 (This Server)  │     │  PUBLIC (Vercel/Netlify/etc)    │    │
+│  │  ════════════════════════   │     │  ════════════════════════════   │    │
+│  │                             │     │                                 │    │
+│  │  🦞 Clawdbot Gateway        │     │  🌐 Your Website                │    │
+│  │  • Full AI capabilities     │     │  • Public chatbot (stateless)   │    │
+│  │  • Shell access, tools      │     │  • Scheduling integration       │    │
+│  │  • Memory & workspace       │     │  • Contact forms                │    │
+│  │  • GitHub push access       │     │  • Direct API calls only        │    │
+│  │  • ONLY YOU can access      │     │  • Anyone can access            │    │
+│  │                             │     │                                 │    │
+│  │  Access: SSH tunnel only    │     │  Access: HTTPS (public)         │    │
+│  │  Port 18789: localhost      │     │                                 │    │
+│  └──────────────┬──────────────┘     └─────────────────────────────────┘    │
+│                 │                                                            │
+│                 │  Clawdbot updates website via:                             │
+│                 │  • Git push (using its own GitHub account)                 │
+│                 │  • S3 sync                                                 │
+│                 ▼                                                            │
+│  ┌─────────────────────────────┐                                            │
+│  │  📧 Clawdbot's Identity     │                                            │
+│  │  • Email: ai@yourdomain.com │                                            │
+│  │  • GitHub: yourdomain-ai    │                                            │
+│  │  • Can receive alerts       │                                            │
+│  │  • Can push to repos        │                                            │
+│  └─────────────────────────────┘                                            │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+**Why separate systems?**
+
+| Concern | Private Clawdbot | Public Website |
+|---------|------------------|----------------|
+| **Security** | Full tool access = high risk if exposed | Stateless = low risk |
+| **Attack surface** | SSH tunnel only | Standard web security |
+| **Capabilities** | Shell, files, memory, GitHub | Text generation only |
+| **Identity** | Your digital twin (full power) | Public receptionist |
 
 ### ⚠️ CRITICAL SECURITY WARNING (from @0xSammy)
 
@@ -1097,27 +1170,431 @@ For maximum isolation, run ClawdBot in Docker with network restrictions:
 
 ---
 
-## Phase 3: VR Website Setup
+# PART 2: DIGITAL TWIN / VA SETUP
 
-*Details to be added once Phase 1 & 2 are complete*
-
-### Planned Steps:
-- [ ] Install Nginx
-- [ ] Set up Node.js app for VR avatar
-- [ ] Configure reverse proxy
-- [ ] Test on port 80
+> **Goal:** Give Clawdbot its own identity to act autonomously — email, GitHub, social media.
+> **Who needs this:** Those building a personal AI assistant / digital twin.
+> **Prerequisites:** Complete Part 1 first.
 
 ---
 
-## Phase 4: Domain Configuration
+## 🔐 Channel Security Comparison
 
-*Details to be added once Phase 3 is complete*
+Before setting up external channels, understand the security tradeoffs:
 
-### Planned Steps:
-- [ ] Configure Route 53 for mayur.ai (point to Elastic IP)
-- [ ] Set up SSL with Let's Encrypt / certbot
-- [ ] Configure Nginx for HTTPS
-- [ ] Test https://mayur.ai
+| Channel | Security | Why |
+|---------|----------|-----|
+| **SSH tunnel + Web chat** | ✅ Excellent | Only you have the PEM key |
+| **Tailscale VPN** | ✅ Excellent | Encrypted mesh, device-based auth |
+| **X/Twitter DMs** | ✅ Good | Private DMs, you control the account |
+| **Email** | ✅ Good | Private inbox, you own the domain |
+| **Telegram Bot** | ⚠️ Moderate | Can allowlist your user ID only |
+| **WhatsApp** | ⚠️ Risky | Borrows YOUR identity — AI replies as you |
+| **Discord (public server)** | ❌ Risky | Anyone in server can interact |
+
+**Recommendation:** Start with SSH tunnel (Part 1). Add email + X for external communication. Avoid WhatsApp unless you use a dedicated number.
+
+---
+
+## Phase 3: Clawdbot Identity (Email + GitHub + X)
+
+For Clawdbot to autonomously manage repos, post to social media, receive notifications, and act as your digital twin, it needs its own identity.
+
+### The Identity Chain
+
+```
+Email (ai@yourdomain.com)          ← Foundation (required first)
+    │
+    ├── GitHub account             ← Code, repos, commits
+    ├── X/Twitter account          ← Social presence, posts
+    └── Other services             ← As needed (sign up with email)
+```
+
+### Why Give Clawdbot Its Own Identity?
+
+| Capability | Requires |
+|------------|----------|
+| Push commits to repos | GitHub account |
+| Post to X/Twitter | X account |
+| Receive GitHub notifications | Email address |
+| Sign up for any service | Email address |
+| Act independently | Distinct identity |
+
+### Step 3.1: Set Up AWS WorkMail (Recommended)
+
+**Why WorkMail over SES?**
+- SES = API only, no inbox, dumps emails to S3
+- WorkMail = Full mailbox with IMAP, like Google Workspace
+
+**WorkMail gives you:**
+- ✅ Real inbox (IMAP access for Clawdbot via CLI)
+- ✅ Web UI (you can log in and review anytime)
+- ✅ Folders, sent mail, search
+- ✅ Uses your AWS credits
+- ✅ Calendar & contacts included
+
+**Cost:** $4/user/month (~$48/year)
+
+**Setup Steps:**
+
+1. **Go to AWS WorkMail Console**: [console.aws.amazon.com/workmail](https://console.aws.amazon.com/workmail/)
+
+2. **Create an organization:**
+   ```
+   WorkMail Console → Create organization → Quick setup
+   Name: yourdomain-mail (or similar)
+   ```
+
+3. **Add your domain:**
+   ```
+   Organization → Domains → Add domain → yourdomain.com
+   ```
+
+4. **Add DNS records** (WorkMail will provide these):
+   - MX record (for receiving mail)
+   - SPF record (TXT)
+   - DKIM records (CNAME)
+   - Autodiscover (CNAME) - optional
+
+5. **Create the AI mailbox:**
+   ```
+   Organization → Users → Create user
+   Username: ai
+   Display name: Your AI Assistant
+   Email: ai@yourdomain.com
+   ```
+
+6. **Note the IMAP/SMTP servers:**
+   ```
+   IMAP: imap.mail.us-east-1.awsapps.com (port 993, SSL)
+   SMTP: smtp.mail.us-east-1.awsapps.com (port 465, SSL)
+   ```
+
+**Web UI access:** `https://mail.us-east-1.awsapps.com/mail`
+
+- [ ] **CHECKPOINT:** WorkMail organization created
+- [ ] **CHECKPOINT:** Domain verified
+- [ ] **CHECKPOINT:** ai@yourdomain.com mailbox created
+
+### Step 3.2: Install Himalaya CLI (Agent-Native Email)
+
+**Why Himalaya?**
+- CLI-native (not built for humans clicking buttons)
+- JSON output (easy for AI to parse)
+- Rust-based, fast, actively maintained
+- GitHub: [pimalaya/himalaya](https://github.com/pimalaya/himalaya)
+
+```bash
+# On EC2:
+ssh clawdbot
+
+# Install via cargo (if Rust installed)
+cargo install himalaya
+
+# Or download pre-built binary
+curl -LO https://github.com/pimalaya/himalaya/releases/latest/download/himalaya-linux-x86_64.tar.gz
+tar -xzf himalaya-linux-x86_64.tar.gz
+sudo mv himalaya /usr/local/bin/
+himalaya --version
+```
+
+**Configure Himalaya:**
+
+```bash
+mkdir -p ~/.config/himalaya
+
+cat > ~/.config/himalaya/config.toml << 'EOF'
+[ai@yourdomain.com]
+email = "ai@yourdomain.com"
+display-name = "Your AI Assistant"
+
+backend = "imap"
+imap-host = "imap.mail.us-east-1.awsapps.com"
+imap-port = 993
+imap-ssl = true
+
+sender = "smtp"
+smtp-host = "smtp.mail.us-east-1.awsapps.com"
+smtp-port = 465
+smtp-ssl = true
+
+# Password will be prompted on first use, or use keyring
+EOF
+```
+
+**Test Himalaya:**
+
+```bash
+# List inbox (JSON output for agent parsing)
+himalaya --output json list
+
+# Read specific email
+himalaya --output json read 1
+
+# Send an email
+himalaya send --to someone@example.com --subject "Test" --body "Hello from Clawdbot!"
+
+# Reply to an email
+himalaya reply 1 --body "Thanks for your email!"
+```
+
+- [ ] **CHECKPOINT:** Himalaya installed and configured
+- [ ] **CHECKPOINT:** Can list/read/send emails via CLI
+
+### Oversight Model
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                 ai@yourdomain.com                        │
+│                 (Same mailbox)                           │
+├────────────────────────┬────────────────────────────────┤
+│                        │                                 │
+│  YOU (Human)           │  CLAWDBOT (AI)                 │
+│  WorkMail Web UI       │  Himalaya CLI                  │
+│  (browser login)       │  (IMAP connection)             │
+│                        │                                 │
+│  • Review all emails   │  • Read inbox                  │
+│  • See sent messages   │  • Send replies                │
+│  • Check what AI did   │  • Compose new emails          │
+│  • Override if needed  │  • Manage folders              │
+│                        │                                 │
+└────────────────────────┴────────────────────────────────┘
+```
+
+**Full visibility** — You can log into the WorkMail web UI anytime to see every email Clawdbot sends/receives.
+
+### Step 3.3: Create GitHub Account for Clawdbot
+
+1. **Go to** [github.com/signup](https://github.com/signup)
+2. **Use the email** you created (e.g., `ai@yourdomain.com`)
+3. **Username suggestion:** `yourdomain-ai` or `yourdomain-bot`
+4. **Verify email** via the link sent to WorkMail
+5. **Enable 2FA** for security
+
+- [ ] **CHECKPOINT:** GitHub account created
+
+### Step 3.4: Generate GitHub Personal Access Token (PAT)
+
+1. Go to [github.com/settings/tokens](https://github.com/settings/tokens)
+2. Click **"Generate new token (classic)"**
+3. Set permissions:
+   - ✅ `repo` (full control)
+   - ✅ `workflow` (if using Actions)
+   - ✅ `read:org` (if collaborating on org repos)
+4. **Copy the token** (starts with `ghp_`)
+
+- [ ] **CHECKPOINT:** GitHub PAT generated
+
+### Step 3.5: Configure Clawdbot with GitHub Access
+
+SSH into your EC2:
+
+```bash
+ssh clawdbot
+```
+
+**Add GitHub credentials to systemd service:**
+
+```bash
+# Create/update the systemd drop-in file
+cat >> ~/.config/systemd/user/clawdbot-gateway.service.d/aws.conf << 'EOF'
+Environment="GITHUB_TOKEN=ghp_YOUR_TOKEN_HERE"
+EOF
+
+# Reload and restart
+systemctl --user daemon-reload
+systemctl --user restart clawdbot-gateway
+```
+
+**Configure git identity on EC2:**
+
+```bash
+git config --global user.name "Your AI Assistant"
+git config --global user.email "ai@yourdomain.com"
+```
+
+- [ ] **CHECKPOINT:** Clawdbot has GitHub access
+
+### Step 3.6: Add Clawdbot as Collaborator to Repos
+
+For each repo you want Clawdbot to manage:
+
+1. Go to repo → Settings → Collaborators
+2. Add the Clawdbot GitHub username
+3. Grant **Write** or **Admin** access as needed
+
+Now Clawdbot can:
+- ✅ Clone private repos
+- ✅ Push commits
+- ✅ Create branches and PRs
+- ✅ Receive notifications via email
+
+- [ ] **CHECKPOINT:** Clawdbot added as collaborator
+
+### Step 3.7: Create X/Twitter Account for Clawdbot
+
+**X API Pricing (as of 2024):**
+
+| Tier | Cost | Write Access |
+|------|------|--------------|
+| Free | $0 | ❌ Read-only, very limited |
+| Basic | $100/month | ✅ 50k tweets/month |
+| Pro | $5,000/month | ✅ Full access |
+
+**Recommended approach: Browser Automation (Free)**
+
+Instead of paying $100/month for API access, Clawdbot can use browser automation to post:
+
+```
+Clawdbot has browser tools
+        │
+        ▼
+Login to X (one-time, save session)
+        │
+        ▼
+Navigate to compose
+        │
+        ▼
+Type and post
+```
+
+**Setup Steps:**
+
+1. **Create X account:**
+   - Go to [x.com/signup](https://x.com/signup)
+   - Use `ai@yourdomain.com` email
+   - Username suggestion: `yourdomain_ai` or `yourname_ai`
+   - Verify email
+
+2. **Login via Clawdbot's browser:**
+   ```bash
+   # Clawdbot can open browser, login, and save session
+   # Then post via browser automation
+   ```
+
+3. **Posting workflow:**
+   ```
+   You: "Post to X: Just shipped a new feature! 🚀"
+   
+   Clawdbot:
+   1. Opens X in browser (using saved session)
+   2. Navigates to compose
+   3. Types the tweet
+   4. Clicks Post
+   5. Confirms success
+   ```
+
+**Note:** This is more fragile than API access but saves $100/month. If you need reliable high-volume posting, consider the Basic API tier.
+
+- [ ] **CHECKPOINT:** X account created
+- [ ] **CHECKPOINT:** Can post via browser automation
+
+### Clawdbot Digital Identity Summary
+
+| Service | Handle | Purpose | Status |
+|---------|--------|---------|--------|
+| Email | ai@yourdomain.com | Foundation for all services | 🔜 |
+| GitHub | @yourdomain-ai | Code, repos, commits | 🔜 |
+| X/Twitter | @yourdomain_ai | Social posts | 🔜 |
+| Website | yourdomain.com | Public presence (you build, Clawdbot maintains) | 🔜 |
+
+---
+
+## Phase 4: Public Website (Hosted Separately)
+
+> ⚠️ **Do NOT host your public website on this EC2!**
+>
+> For security, keep this Clawdbot server private. Host your public website on a separate platform.
+
+### Recommended Hosting Options
+
+| Platform | Best For | Cost |
+|----------|----------|------|
+| **Vercel** | Next.js, React | Free tier |
+| **Netlify** | Static sites, JAMstack | Free tier |
+| **Cloudflare Pages** | Static + Workers | Free tier |
+| **S3 + CloudFront** | AWS-native static | ~$1/month |
+
+### How Clawdbot Updates Your Website
+
+```
+┌─────────────────────┐         ┌─────────────────────┐
+│  Clawdbot (EC2)     │         │  Vercel/Netlify     │
+│                     │         │                     │
+│  1. You instruct    │         │  3. Auto-deploys    │
+│     Clawdbot        │ ──git──▶│     from main       │
+│                     │  push   │                     │
+│  2. Clawdbot edits  │         │  4. Site updated!   │
+│     files & commits │         │                     │
+└─────────────────────┘         └─────────────────────┘
+```
+
+### Step 4.1: Create Website Repo
+
+On GitHub (using Clawdbot's account or yours):
+
+```bash
+# Create a new repo for your website
+# e.g., github.com/yourusername/yourdomain-website
+```
+
+### Step 4.2: Deploy to Vercel (Recommended)
+
+1. Go to [vercel.com](https://vercel.com)
+2. Sign up / log in with GitHub
+3. Import your website repo
+4. Configure:
+   - Framework: Next.js (or your choice)
+   - Root directory: `/` (or your app folder)
+5. Deploy!
+
+**Add custom domain:**
+```
+Vercel Dashboard → Project → Settings → Domains → Add yourdomain.com
+```
+
+**Configure DNS** (in Route 53 or your registrar):
+```
+Type: CNAME
+Name: www (or @)
+Value: cname.vercel-dns.com
+```
+
+- [ ] **CHECKPOINT:** Website deployed to Vercel
+
+### Step 4.3: Public Chatbot (Optional)
+
+For a public chatbot on your website, add a simple API route:
+
+```typescript
+// pages/api/chat.ts (Next.js example)
+import Anthropic from "@anthropic-ai/sdk";
+
+export default async function handler(req, res) {
+  const { message } = req.body;
+  
+  const client = new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY // Vercel env var
+  });
+  
+  const response = await client.messages.create({
+    model: "claude-3-5-sonnet-20241022",
+    max_tokens: 1024,
+    system: "You are a helpful assistant for [your website]...",
+    messages: [{ role: "user", content: message }]
+  });
+  
+  res.json({ reply: response.content[0].text });
+}
+```
+
+**This public chatbot:**
+- ❌ Does NOT connect to your private Clawdbot
+- ✅ Uses direct Anthropic/Bedrock API calls
+- ✅ Is stateless (no memory, no tools)
+- ✅ Safe for public exposure
+
+- [ ] **CHECKPOINT:** Public chatbot deployed (optional)
 
 ---
 
